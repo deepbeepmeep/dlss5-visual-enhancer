@@ -5,6 +5,19 @@
 
 Windows application for applying a DLSS 5 Neural Rendering feature-18 pipeline to images and video, and NVIDIA DLSS Frame Generation to video frame interpolation, through a local Gradio interface. It is an independent community project and is not affiliated with, sponsored by, or endorsed by NVIDIA, ReShade, RenoDX, FFmpeg, or their contributors.
 
+## WanGP fork
+
+This fork preserves Merserk's standalone application and adds the native bridge used by [WanGP](https://github.com/DeepBeepMeep/Wan2GP). Compared with the original project, it adds:
+
+- a buildable `native/WanGP-Adapter` worker with a streaming `--wangp-video` protocol;
+- explicit per-frame RGBA8 color, R16G16_FLOAT current-to-previous motion vectors, and R32_FLOAT reversed-Z depth input;
+- sibling `host/`, `dlss/`, and `dlssg/` runtime directories suitable for direct extraction into `WanGP/dlss5`;
+- release ZIPs containing the Merserk workers and the additional WanGP worker in that directory structure.
+
+WanGP estimates motion with RAFT and depth with its configured Depth Anything preprocessor. Merserk's original `nvngx.dll --video` worker remains available for comparison, but it does not accept the depth stream. The original standalone Gradio application is otherwise unchanged.
+
+The WanGP worker ZIP intentionally excludes NVIDIA, ReShade, RenoDX, and other third-party binaries. Those files must be obtained separately under their own licenses and placed in the documented subfolders. See the [WanGP DLSS 5 installation guide](https://github.com/DeepBeepMeep/Wan2GP/blob/main/docs/DLSS5.md) before running any binary.
+
 <img width="1810" height="1000" alt="Screenshot 2026-09-03 005153" src="https://github.com/user-attachments/assets/ad15df03-2934-4a20-90ca-5a6514a5de32" />
 
 ### Original
@@ -24,6 +37,8 @@ https://github.com/user-attachments/assets/81c29005-e4f0-4acf-b9f7-d58850bb055f
 1. Download the [latest release](https://github.com/Merserk/dlss5-visual-enhancer/releases/latest).
 2. Unpack the downloaded ZIP archive.
 3. Run `start.bat`.
+
+For WanGP, download the `WanGP-DLSS5-workers-*.zip` asset from this fork's Releases page, create `WanGP/dlss5`, and extract the archive contents into that folder. Do not extract it into `WanGP/postprocessing/dlss5`.
 
 ## Main features
 

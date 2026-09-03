@@ -19,6 +19,7 @@ bin/runtime/host/LICENSE-RenoDX.txt      <- MIT, committed in this folder
 bin/runtime/host/nvngx_dlssnr.dll        <- NVIDIA DLSSNR 310.8.0.0 (DLSS 5 Neural Rendering)
 bin/runtime/host/LICENSE-NVIDIA-DLSS.txt <- NVIDIA RTX SDKs License, committed in this folder
 bin/runtime/host/nvngx.dll               <- project-built D3D12 worker (MIT, see below)
+bin/runtime/host/nr-depth-worker.exe      <- WanGP depth-aware D3D12 worker (MIT source in native/WanGP-Adapter)
 bin/runtime/dlss/nvngx_dlss.dll          <- NVIDIA DLSS 310.8.0.0 (Super Resolution)
 bin/runtime/dlss/LICENSE-NVIDIA-DLSS.txt <- same NVIDIA text, keep a copy next to the DLL
 bin/runtime/dlssg/nvngx_dlssg.dll        <- NVIDIA DLSS-G 310.7.0.0 (Frame Generation, NGX path)
@@ -53,6 +54,10 @@ run — never commit it.
   (`DLSS5-Feeder`, `Frame-Interpolation`; not published in this repo).
   No download needed if you have the release ZIP; otherwise build them
   from the published sources.
+- **WanGP adapter (`host/nr-depth-worker.exe`):** build it from
+  `native/WanGP-Adapter`. It accepts WanGP's explicit color, motion, and
+  depth stream and uses the same separately installed DLSS/ReShade/RenoDX
+  runtime. It is included in WanGP worker-bundle release assets.
 
 ## Integrity checklist (SHA256 of the tested files)
 
