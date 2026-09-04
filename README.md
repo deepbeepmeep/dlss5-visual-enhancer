@@ -11,10 +11,11 @@ This fork preserves Merserk's standalone application and adds the native bridge 
 
 - a buildable `native/WanGP-Adapter` worker with a streaming `--wangp-video` protocol;
 - explicit per-frame RGBA8 color, R16G16_FLOAT current-to-previous motion vectors, and R32_FLOAT reversed-Z depth input;
+- an open-source direct-D3D12 Frame Generation worker with native 2x, 3x, and 4x Multi Frame Generation and the original worker's `--serve` protocol;
 - sibling `host/`, `dlss/`, and `dlssg/` runtime directories suitable for direct extraction into `WanGP/dlss5`;
-- release ZIPs containing the Merserk workers and the additional WanGP worker in that directory structure.
+- release ZIPs containing the legacy Merserk Neural Rendering worker and both WanGP workers in that directory structure.
 
-WanGP estimates motion with RAFT and depth with its configured Depth Anything preprocessor. Merserk's original `nvngx.dll --video` worker remains available for comparison, but it does not accept the depth stream. The original standalone Gradio application is otherwise unchanged.
+WanGP estimates motion with RAFT and depth with its configured Depth Anything preprocessor. Merserk's original `nvngx.dll --video` worker remains available for comparison, but it does not accept the depth stream. Merserk's closed Frame Generation worker is replaced in the WanGP bundle because its separately synchronized multi-frame submissions cause current NGX runtimes to disable 3x/4x output. The open worker records the whole group in one command list and has been validated with distinct native outputs. The original standalone Gradio application is otherwise unchanged.
 
 The WanGP worker ZIP intentionally excludes NVIDIA, ReShade, RenoDX, and other third-party binaries. Those files must be obtained separately under their own licenses and placed in the documented subfolders. See the [WanGP DLSS 5 installation guide](https://github.com/DeepBeepMeep/Wan2GP/blob/main/docs/DLSS5.md) before running any binary.
 
