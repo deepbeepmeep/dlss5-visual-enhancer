@@ -11,7 +11,7 @@ The `--wangp-video` mode is a bounded-memory binary stream. WanGP sends one fram
 
 The worker invokes the public DLSS/DLAA feature-1 API. A separately installed RenoDX DLSS 5 add-on intercepts that call and performs feature 18 Neural Rendering. No private feature-18 ABI is copied into this source.
 
-`dlssg_worker.cpp` is a direct D3D12 host for the documented NGX DLSS Frame Generation API. It preserves the original Merserk worker's bounded streaming protocol, but records every Multi Frame Generation index for a rendered frame in one GPU command list. This makes native 2x, 3x, and 4x return distinct intermediate frames. It also publishes a stable `DLSSG.BackbufferFrameID` for each group. This is an independent implementation; no Merserk machine code or unpublished source is included.
+`dlssg_worker.cpp` is a direct D3D12 host for the documented NGX DLSS Frame Generation API. It preserves the original Merserk worker's bounded streaming protocol, but records every Multi Frame Generation index for a rendered frame in one GPU command list. This makes native 2x through 6x return distinct intermediate frames when the hardware and NGX runtime expose the requested count. It also publishes a stable `DLSSG.BackbufferFrameID` for each group. This is an independent implementation; no Merserk machine code or unpublished source is included.
 
 ## Build
 
