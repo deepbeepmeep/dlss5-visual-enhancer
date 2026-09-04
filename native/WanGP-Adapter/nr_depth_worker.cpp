@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <cstring>
 #include <cstdlib>
+#include <cmath>
 #include <fcntl.h>
 #include <io.h>
 #include <vector>
@@ -190,6 +191,17 @@ static void HostRenodxDefault(const char *ini, const char *key, const char *valu
     }
     else
         Log("[host] %s=%s (user-set; leaving it alone)", key, v);
+}
+
+static void SetWanGPNRIntensity(float intensity)
+{
+    char dir[MAX_PATH], ini[MAX_PATH], value[32];
+    GetModuleFileNameA(nullptr, dir, MAX_PATH);
+    if (char *s = strrchr(dir, '\\')) *(s + 1) = '\0';
+    sprintf_s(ini, "%sReShade.ini", dir);
+    sprintf_s(value, "%.4f", intensity);
+    WritePrivateProfileStringA("RenoDX.DLSS5", "NRIntensity", value, ini);
+    Log("[host] WanGP NRIntensity=%s", value);
 }
 
 // Detect the DLSS 5 add-on generation next to this exe: v45+ ('EnableHooks' marker in
@@ -2297,6 +2309,7 @@ int main(int argc, char **argv)
     timeBeginPeriod(1);
 
     bool  test = false, hide = false, behind = false;
+    float nr_intensity = 1.0f;
     DWORD pid = 0;
     for (int i = 1; i < argc; ++i)
     {
@@ -2304,16 +2317,25 @@ int main(int argc, char **argv)
         else if (strcmp(argv[i], "--hide") == 0) hide = true;
         else if (strcmp(argv[i], "--behind") == 0) behind = true;
         else if (strcmp(argv[i], "--wangp-video") == 0) {}
+        else if (strcmp(argv[i], "--nr-intensity") == 0)
+        {
+            if (++i >= argc) { Log("--nr-intensity requires a value from 0 to 2"); return 1; }
+            char *end = nullptr;
+            nr_intensity = strtof(argv[i], &end);
+            if (end == argv[i] || *end != '\0' || !std::isfinite(nr_intensity) || nr_intensity < 0.0f || nr_intensity > 2.0f)
+            { Log("invalid --nr-intensity '%s'; expected a value from 0 to 2", argv[i]); return 1; }
+        }
         else pid = static_cast<DWORD>(strtoul(argv[i], nullptr, 10));
     }
     if (!test && !wangp_video && pid == 0)
     {
-        Log("usage: nr-depth-worker --test | --wangp-video | <game pid> [--hide | --behind]");
+        Log("usage: nr-depth-worker --test | --wangp-video [--nr-intensity 0..2] | <game pid> [--hide | --behind]");
         return 1;
     }
     g_show_window = !test && !wangp_video && !hide;   // the visible window carries the DLSS 5 add-on's tuning panel
     g_behind      = g_show_window && behind;
 
+    if (wangp_video) SetWanGPNRIntensity(nr_intensity);
     DetectRenodxAddon();   // must run BEFORE ReShade loads, so an EnableHooks write is read
     DetectToolkitAddon();
     DetectChickenAddon();   // after DetectRenodxAddon: it needs g_renodx_present
