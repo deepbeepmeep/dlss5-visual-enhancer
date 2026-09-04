@@ -100,7 +100,7 @@ The DLSS Model Preset is independent of the experimental Neural Rendering **NR P
 | Performance | 2× | Produces 2× output dimensions |
 | Ultra Performance | 3× | Produces 3× output dimensions |
 
-Output dimensions are rounded to even pixels and limited to a 7680×4320 boundary.
+Output dimensions are rounded to even pixels and limited to a 7680×4320 boundary in either landscape or portrait orientation.
 
 | Frame Interpolation setting | Choices and behavior | Default |
 | --- | --- | --- |

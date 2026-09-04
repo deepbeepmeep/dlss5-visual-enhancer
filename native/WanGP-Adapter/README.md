@@ -13,6 +13,8 @@ The worker invokes the public DLSS/DLAA feature-1 API. A separately installed Re
 
 WanGP passes `--nr-intensity 0..2` with `--wangp-video`. The worker validates it and writes RenoDX's native `NRIntensity` setting before ReShade loads; `1` is the native default.
 
+Spatial output is limited to an orientation-independent 8K boundary: at most 7680 pixels on the long edge and 4320 pixels on the short edge.
+
 `dlssg_worker.cpp` is a direct D3D12 host for the documented NGX DLSS Frame Generation API. It preserves the original Merserk worker's bounded streaming protocol, but records every Multi Frame Generation index for a rendered frame in one GPU command list. This makes native 2x through 6x return distinct intermediate frames when the hardware and NGX runtime expose the requested count. It also publishes a stable `DLSSG.BackbufferFrameID` for each group. This is an independent implementation; no Merserk machine code or unpublished source is included.
 
 ## Build

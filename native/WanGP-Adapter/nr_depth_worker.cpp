@@ -1735,7 +1735,7 @@ static int RunWanGPVideo()
 {
     WanGPVideoHeader header = {};
     if (!ReadStdio(&header, sizeof(header)) || header.magic != WANGP_SETUP_MAGIC || header.width < 64 || header.height < 64 ||
-        header.output_width < header.width || header.output_height < header.height || header.output_width > 7680 || header.output_height > 4320 || header.frame_count == 0) return 2;
+        header.output_width < header.width || header.output_height < header.height || (std::max)(header.output_width, header.output_height) > 7680 || (std::min)(header.output_width, header.output_height) > 4320 || header.frame_count == 0) return 2;
     WanGPVideoState state;
     WanGPSetupResult setup = { WANGP_SETUP_OUT_MAGIC, 1, header.width, header.height, header.output_width, header.output_height };
     if (!CreateWanGPResources(state, header)) { WriteStdio(&setup, sizeof(setup)); return 3; }
