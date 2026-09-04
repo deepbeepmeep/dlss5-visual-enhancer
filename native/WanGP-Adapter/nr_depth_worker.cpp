@@ -974,6 +974,45 @@ static void CopyPanel()
 typedef HRESULT (WINAPI *PFN_D3D12CreateDevice_)(IUnknown *, D3D_FEATURE_LEVEL, REFIID, void **);
 typedef HRESULT (WINAPI *PFN_CreateDXGIFactory1_)(REFIID, void **);
 
+static void *WINAPI BlockReShadeUpdateCheck(void *, const wchar_t *, const wchar_t *, DWORD, DWORD, DWORD_PTR)
+{
+    SetLastError(ERROR_ACCESS_DENIED);
+    static LONG logged = 0;
+    if (InterlockedCompareExchange(&logged, 1, 0) == 0)
+        Log("[host] blocked ReShade's unnecessary GitHub update check");
+    return nullptr;
+}
+
+static bool PatchImportedFunction(HMODULE module, const char *library, const char *function, void *replacement)
+{
+    auto base = reinterpret_cast<unsigned char *>(module);
+    auto dos = reinterpret_cast<IMAGE_DOS_HEADER *>(base);
+    auto nt = reinterpret_cast<IMAGE_NT_HEADERS *>(base + dos->e_lfanew);
+    const auto &directory = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+    if (dos->e_magic != IMAGE_DOS_SIGNATURE || nt->Signature != IMAGE_NT_SIGNATURE || directory.VirtualAddress == 0) return false;
+
+    auto descriptor = reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR *>(base + directory.VirtualAddress);
+    for (; descriptor->Name != 0; ++descriptor)
+    {
+        if (_stricmp(reinterpret_cast<const char *>(base + descriptor->Name), library) != 0 || descriptor->OriginalFirstThunk == 0) continue;
+        auto names = reinterpret_cast<IMAGE_THUNK_DATA *>(base + descriptor->OriginalFirstThunk);
+        auto addresses = reinterpret_cast<IMAGE_THUNK_DATA *>(base + descriptor->FirstThunk);
+        for (; names->u1.AddressOfData != 0; ++names, ++addresses)
+        {
+            if (IMAGE_SNAP_BY_ORDINAL(names->u1.Ordinal)) continue;
+            auto import = reinterpret_cast<IMAGE_IMPORT_BY_NAME *>(base + names->u1.AddressOfData);
+            if (strcmp(reinterpret_cast<const char *>(import->Name), function) != 0) continue;
+            DWORD protection = 0;
+            if (!VirtualProtect(&addresses->u1.Function, sizeof(addresses->u1.Function), PAGE_READWRITE, &protection)) return false;
+            InterlockedExchangePointer(reinterpret_cast<void *volatile *>(&addresses->u1.Function), replacement);
+            DWORD ignored = 0;
+            VirtualProtect(&addresses->u1.Function, sizeof(addresses->u1.Function), protection, &ignored);
+            return true;
+        }
+    }
+    return false;
+}
+
 // The message drain always runs -- it is what keeps the window responsive. When idle
 // (no frames arriving), the banner copy and the Present behind it are throttled to
 // 30 Hz; what made the old per-frame call expensive was the CPU wait for our own
@@ -1069,6 +1108,10 @@ static bool InitDisguise()
     // d3d12.dll means every later D3D12/DXGI entry point goes through its hooks --
     // the same order a real game gets, and what lets the DLSS 5 add-on see us.
     HMODULE dxgi = LoadLibraryW(L"dxgi.dll");
+    if (dxgi != nullptr)
+        Log(PatchImportedFunction(dxgi, "WININET.dll", "InternetOpenUrlW", reinterpret_cast<void *>(&BlockReShadeUpdateCheck))
+            ? "[host] disabled ReShade's GitHub update check for this worker process"
+            : "[host] ReShade has no GitHub update-check import to disable");
     HMODULE d3d12 = LoadLibraryW(L"d3d12.dll");
     auto create_device  = d3d12 ? reinterpret_cast<PFN_D3D12CreateDevice_>(GetProcAddress(d3d12, "D3D12CreateDevice")) : nullptr;
     auto create_factory = dxgi ? reinterpret_cast<PFN_CreateDXGIFactory1_>(GetProcAddress(dxgi, "CreateDXGIFactory1")) : nullptr;

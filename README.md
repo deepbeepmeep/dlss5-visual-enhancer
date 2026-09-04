@@ -14,6 +14,7 @@ This fork preserves Merserk's standalone application and adds the native bridge 
 - an open-source direct-D3D12 Frame Generation worker with native 2x through 6x Multi Frame Generation on capable hardware and the original worker's `--serve` protocol;
 - sibling `host/`, `dlss/`, and `dlssg/` runtime directories suitable for direct extraction into `WanGP/dlss5`;
 - release ZIPs containing the legacy Merserk Neural Rendering worker and both WanGP workers in that directory structure.
+- a worker-local block for ReShade's automatic GitHub update check, which is unnecessary during offline media processing.
 
 WanGP estimates motion with RAFT and depth with its configured Depth Anything preprocessor. Merserk's original `nvngx.dll --video` worker remains available for comparison, but it does not accept the depth stream. Merserk's closed Frame Generation worker is replaced in the WanGP bundle because its separately synchronized multi-frame submissions cause current NGX runtimes to disable 3x/4x output. The open worker records the whole group in one command list and has been validated with distinct native outputs. The original standalone Gradio application is otherwise unchanged.
 
