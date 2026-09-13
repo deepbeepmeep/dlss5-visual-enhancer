@@ -163,15 +163,34 @@ public:
             if (!select_luid) return Fail("invalid --adapter-luid value");
         }
 
+        // WanGP patch: NVIDIA-vendor-first adapter selection. On dual-GPU boxes
+        // (e.g. an AMD APU presenting as adapter 0) the first-compatible adapter
+        // is the wrong one for NGX. Pass 1 collects candidates in order; pass 2
+        // tries NVIDIA hardware before everything else. With no NVIDIA present,
+        // selection is identical to the stock first-compatible behavior. An
+        // explicit --adapter-luid still bypasses this entirely.
+        constexpr uint32_t nvidia_vendor_id = 0x10DE;
+        std::vector<UINT> ordered;
         for (UINT index = 0;; ++index) {
             IDXGIAdapter1 *candidate = nullptr;
             if (factory_->EnumAdapters1(index, &candidate) == DXGI_ERROR_NOT_FOUND) break;
             DXGI_ADAPTER_DESC1 desc = {};
             candidate->GetDesc1(&desc);
             const uint64_t luid = (static_cast<uint64_t>(static_cast<uint32_t>(desc.AdapterLuid.HighPart)) << 32) | desc.AdapterLuid.LowPart;
-            fwprintf(stderr, L"Adapter %u: %ls, LUID %08X:%08X\n", index, desc.Description, static_cast<uint32_t>(desc.AdapterLuid.HighPart), desc.AdapterLuid.LowPart);
-            if (!(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) && (!select_luid || luid == wanted_luid) &&
-                SUCCEEDED(D3D12CreateDevice(candidate, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device_)))) {
+            fwprintf(stderr, L"Adapter %u: %ls, vendor %04X, LUID %08X:%08X\n", index, desc.Description, desc.VendorId, static_cast<uint32_t>(desc.AdapterLuid.HighPart), desc.AdapterLuid.LowPart);
+            if (!(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) && (!select_luid || luid == wanted_luid)) {
+                if (select_luid || desc.VendorId == nvidia_vendor_id) ordered.insert(ordered.begin(), index);
+                else ordered.push_back(index);
+            }
+            candidate->Release();
+        }
+        for (const UINT index : ordered) {
+            IDXGIAdapter1 *candidate = nullptr;
+            if (FAILED(factory_->EnumAdapters1(index, &candidate))) continue;
+            DXGI_ADAPTER_DESC1 desc = {};
+            candidate->GetDesc1(&desc);
+            fwprintf(stderr, L"Selecting adapter %u: %ls (vendor %04X)\n", index, desc.Description, desc.VendorId);
+            if (SUCCEEDED(D3D12CreateDevice(candidate, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device_)))) {
                 adapter_ = candidate;
                 break;
             }

@@ -1141,9 +1141,45 @@ static bool InitDisguise()
     if (h.hwnd == nullptr) { Log("[host] window creation failed"); return false; }
     if (g_show_window) ShowWindow(h.hwnd, SW_SHOWNOACTIVATE);   // never steal the game's focus
 
-    HRESULT hr = create_device(nullptr, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device),
-                               reinterpret_cast<void **>(&h.dev));
-    if (FAILED(hr)) { Log("[host] D3D12CreateDevice failed 0x%08X", hr); return false; }
+    // WanGP patch: NVIDIA-vendor-first adapter selection. On dual-GPU boxes
+    // (e.g. an AMD APU presenting as adapter 0) the default adapter is the
+    // wrong one for NGX. Prefer NVIDIA hardware, then the first non-software
+    // adapter. Falls back to the stock nullptr (default adapter) only if
+    // enumeration finds nothing usable.
+    HRESULT hr = S_OK;
+    IDXGIFactory1 *probe_factory = nullptr;
+    hr = create_factory(__uuidof(IDXGIFactory1), reinterpret_cast<void **>(&probe_factory));
+    if (FAILED(hr)) { Log("[host] CreateDXGIFactory1 failed 0x%08X", hr); return false; }
+    const uint32_t nvidia_vendor_id = 0x10DE;
+    std::vector<UINT> ordered;
+    for (UINT index = 0;; ++index) {
+        IDXGIAdapter1 *candidate = nullptr;
+        if (probe_factory->EnumAdapters1(index, &candidate) == DXGI_ERROR_NOT_FOUND) break;
+        DXGI_ADAPTER_DESC1 desc = {};
+        candidate->GetDesc1(&desc);
+        Log("[host] adapter %u: %ls vendor %04X LUID %08X:%08X", index, desc.Description, desc.VendorId,
+            (unsigned)desc.AdapterLuid.HighPart, (unsigned)desc.AdapterLuid.LowPart);
+        if (!(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)) {
+            if (desc.VendorId == nvidia_vendor_id) ordered.insert(ordered.begin(), index);
+            else ordered.push_back(index);
+        }
+        candidate->Release();
+    }
+    for (const UINT index : ordered) {
+        IDXGIAdapter1 *candidate = nullptr;
+        if (FAILED(probe_factory->EnumAdapters1(index, &candidate))) continue;
+        DXGI_ADAPTER_DESC1 desc = {};
+        candidate->GetDesc1(&desc);
+        Log("[host] selecting adapter %u: %ls (vendor %04X)", index, desc.Description, desc.VendorId);
+        if (SUCCEEDED(create_device(candidate, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device),
+                                    reinterpret_cast<void **>(&h.dev)))) {
+            candidate->Release();
+            break;
+        }
+        candidate->Release();
+    }
+    probe_factory->Release();
+    if (h.dev == nullptr) { Log("[host] D3D12CreateDevice failed on all enumerated adapters (or none found)"); return false; }
 
     D3D12_COMMAND_QUEUE_DESC qd = {};
     h.dev->CreateCommandQueue(&qd, __uuidof(ID3D12CommandQueue), reinterpret_cast<void **>(&h.pump_queue));
