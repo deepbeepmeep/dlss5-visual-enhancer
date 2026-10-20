@@ -1,0 +1,40 @@
+name: Linux DLSSG worker
+
+on:
+  push:
+    paths:
+      - native/WanGP-Adapter/**
+      - .github/workflows/linux-dlssg.yml
+  pull_request:
+    paths:
+      - native/WanGP-Adapter/**
+      - .github/workflows/linux-dlssg.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build and software Vulkan dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ libvulkan-dev mesa-vulkan-drivers vulkan-validationlayers
+      - name: Fetch pinned NVIDIA SDK
+        run: |
+          git clone --filter=blob:none --no-checkout https://github.com/NVIDIA/DLSS.git "$RUNNER_TEMP/NVIDIA-DLSS"
+          git -C "$RUNNER_TEMP/NVIDIA-DLSS" sparse-checkout set include lib/Linux_x86_64
+          git -C "$RUNNER_TEMP/NVIDIA-DLSS" checkout 9981c6350dc58c0ce21f024fd65e31e851c31689
+      - name: Build
+        run: bash native/WanGP-Adapter/build_linux.sh "$RUNNER_TEMP/NVIDIA-DLSS"
+      - name: Protocol failures and software Vulkan transfers (no DLSS inference)
+        env:
+          VK_INSTANCE_LAYERS: VK_LAYER_KHRONOS_validation
+        run: |
+          icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          export VK_ICD_FILENAMES="${icds[0]}"
+          python3 native/WanGP-Adapter/test_linux_worker.py bin/runtime/dlssg/dlssg-worker --transfers

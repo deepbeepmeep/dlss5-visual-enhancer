@@ -16,3 +16,10 @@ __pycache__/
 !README.txt
 !.gitkeep
 !.gitignore
+
+# Locally built Linux worker and separately obtained runtime/license copies.
+/runtime/dlssg/dlssg-worker
+/runtime/dlssg/libnvidia-ngx-dlssg.so.*
+/runtime/dlssg/LICENSE-WanGP-Adapters.txt
+/runtime/dlssg/LICENSE-NVIDIA-DLSS-Linux.txt
+/runtime/dlssg/.build-*/

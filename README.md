@@ -12,6 +12,7 @@ This fork preserves Merserk's standalone application and adds the native bridge 
 - a buildable `native/WanGP-Adapter` worker with a streaming `--wangp-video` protocol;
 - explicit per-frame RGBA8 color, R16G16_FLOAT current-to-previous motion vectors, and R32_FLOAT reversed-Z depth input;
 - an open-source direct-D3D12 Frame Generation worker with native 2x through 6x Multi Frame Generation on capable hardware and the original worker's `--serve` protocol;
+- an experimental Linux x86_64 Vulkan Frame Generation x2 worker, with [build and diagnostic instructions](native/WanGP-Adapter/README.md#build-on-linux-experimental-frame-generation-x2); NVIDIA inference and visual quality still require native Linux validation;
 - sibling `host/`, `dlss/`, and `dlssg/` runtime directories suitable for direct extraction into `WanGP/dlss5`;
 - release ZIPs containing the legacy Merserk Neural Rendering worker and both WanGP workers in that directory structure.
 - a worker-local block for ReShade's automatic GitHub update check, which is unnecessary during offline media processing.
